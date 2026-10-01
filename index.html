@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Studio Generatora AI</title>
+    <title>Cwaniak-Ai Studio</title>
     <style>
         :root {
             --bg: #0b0f19;
@@ -92,6 +92,7 @@
             color: var(--text-secondary);
             margin-top: 12px;
             text-align: center;
+            word-break: break-all;
         }
         .loader {
             width: 32px;
@@ -111,86 +112,81 @@
 </head>
 <body>
     <div class="container">
-        <h2>Studio Generatora AI</h2>
+        <h2>Cwaniak-Ai Studio</h2>
         
-        <label>Token Hugging Face</label>
-        <textarea id="token" rows="2" placeholder="Wklej swój token hf_..."></textarea>
+        <label>Token Hugging Face (Read)</label>
+        <textarea id="token" rows="2" placeholder="hf_..."></textarea>
 
-        <label>Styl graficzny</label>
-        <select id="styleSelect">
-            <option value="cinematic">Cinematic / Realistyczny</option>
-            <option value="cyberpunk">Cyberpunk Neon</option>
-            <option value="anime">Anime / Manga</option>
-            <option value="fantasy">Magiczny Fantasy</option>
+        <label>Model AI</label>
+        <select id="modelSelect">
+            <option value="black-forest-labs/FLUX.1-schnell">FLUX.1-schnell (Rekomendowany)</option>
         </select>
 
         <label>Opis sceny (Prompt)</label>
         <textarea id="prompt" rows="3">A glowing neon jellyfish floating smoothly through dark blue deep ocean, cinematic lighting</textarea>
 
-        <button onclick="generateWithToken()">Wygeneruj Obraz</button>
+        <button onclick="generateImage()">Generuj Obraz</button>
         <div id="result"></div>
+        <div class="status" id="status">Status: Gotowy do pracy</div>
     </div>
 
     <script>
+        // Automatyczne wczytanie zapisanego tokena
         window.onload = () => {
             const savedToken = localStorage.getItem('hf_token');
             if (savedToken) document.getElementById('token').value = savedToken;
         };
 
-        const styleModifiers = {
-            cinematic: ", cinematic lighting, highly detailed, 4k resolution, photorealistic",
-            cyberpunk: ", cyberpunk style, glowing neon lights, vibrant pink and cyan tones, futuristic",
-            anime: ", beautiful anime art style, vibrant colors, Studio Ghibli aesthetic, detailed illustration",
-            fantasy: ", magical fantasy world, glowing elements, ethereal mist, highly detailed digital painting"
-        };
-
-        async function generateWithToken() {
+        async function generateImage() {
             const token = document.getElementById('token').value.trim();
-            const promptBase = document.getElementById('prompt').value.trim();
-            const style = document.getElementById('styleSelect').value;
+            const model = document.getElementById('modelSelect').value;
+            const prompt = document.getElementById('prompt').value.trim();
+            const statusEl = document.getElementById('status');
             const resultEl = document.getElementById('result');
 
             if (!token) {
-                alert('Wklej swój token Hugging Face!');
+                alert('Wprowadź token Hugging Face!');
                 return;
             }
-            if (!promptBase) {
-                alert('Wpisz opis sceny!');
+            if (!prompt) {
+                alert('Wpisz prompt!');
                 return;
             }
 
+            // Zapisz token lokalnie w przeglądarce
             localStorage.setItem('hf_token', token);
-            const fullPrompt = promptBase + (styleModifiers[style] || '');
 
-            resultEl.innerHTML = `
-                <div class="loader"></div>
-                <div class="status">Wysyłanie zapytania do Hugging Face...</div>
-            `;
+            resultEl.innerHTML = '';
+            statusEl.innerText = 'Wysyłanie zapytania do serwera AI...';
 
             try {
-                const response = await fetch('https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell', {
+                // Oficjalny endpoint routera Hugging Face Inference API
+                const response = await fetch(`https://router.huggingface.co/hf-inference/models/${model}`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Accept': 'image/jpeg'
                     },
-                    body: JSON.stringify({ inputs: fullPrompt })
+                    body: JSON.stringify({
+                        inputs: prompt,
+                        options: { wait_for_model: true }
+                    })
                 });
 
                 if (!response.ok) {
-                    const errText = await response.text();
-                    throw new Error(`Błąd serwera (${response.status}): ${errText}`);
+                    const errJson = await response.json().catch(() => ({}));
+                    throw new Error(errJson.error || `Błąd HTTP: ${response.status}`);
                 }
 
                 const blob = await response.blob();
                 const imageUrl = URL.createObjectURL(blob);
 
-                resultEl.innerHTML = `
-                    <img src="${imageUrl}" alt="Wygenerowany obraz">
-                    <div class="status" style="color: #4ade80; margin-top: 10px;">Gotowe! Przytrzymaj obraz, aby zapisać.</div>
-                `;
+                resultEl.innerHTML = `<img src="${imageUrl}" alt="Wygenerowany obraz">`;
+                statusEl.innerText = 'Status: Sukces! Obraz wygenerowany.';
             } catch (err) {
-                resultEl.innerHTML = `<div class="status" style="color: #f87171;">Błąd: ${err.message}</div>`;
+                statusEl.innerText = `Błąd: ${err.message}`;
+                console.error(err);
             }
         }
     </script>
