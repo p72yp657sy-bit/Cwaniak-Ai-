@@ -113,6 +113,9 @@
     <div class="container">
         <h2>Studio Generatora AI</h2>
         
+        <label>Token Hugging Face</label>
+        <textarea id="token" rows="2" placeholder="Wklej swój token hf_..."></textarea>
+
         <label>Styl graficzny</label>
         <select id="styleSelect">
             <option value="cinematic">Cinematic / Realistyczny</option>
@@ -124,11 +127,16 @@
         <label>Opis sceny (Prompt)</label>
         <textarea id="prompt" rows="3">A glowing neon jellyfish floating smoothly through dark blue deep ocean, cinematic lighting</textarea>
 
-        <button onclick="generateImage()">Wygeneruj Obraz</button>
+        <button onclick="generateWithToken()">Wygeneruj Obraz</button>
         <div id="result"></div>
     </div>
 
     <script>
+        window.onload = () => {
+            const savedToken = localStorage.getItem('hf_token');
+            if (savedToken) document.getElementById('token').value = savedToken;
+        };
+
         const styleModifiers = {
             cinematic: ", cinematic lighting, highly detailed, 4k resolution, photorealistic",
             cyberpunk: ", cyberpunk style, glowing neon lights, vibrant pink and cyan tones, futuristic",
@@ -136,52 +144,54 @@
             fantasy: ", magical fantasy world, glowing elements, ethereal mist, highly detailed digital painting"
         };
 
-        function generateImage() {
+        async function generateWithToken() {
+            const token = document.getElementById('token').value.trim();
             const promptBase = document.getElementById('prompt').value.trim();
             const style = document.getElementById('styleSelect').value;
             const resultEl = document.getElementById('result');
 
+            if (!token) {
+                alert('Wklej swój token Hugging Face!');
+                return;
+            }
             if (!promptBase) {
                 alert('Wpisz opis sceny!');
                 return;
             }
 
+            localStorage.setItem('hf_token', token);
             const fullPrompt = promptBase + (styleModifiers[style] || '');
-            const seed = Math.floor(Math.random() * 10000000);
-            const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?model=flux&seed=${seed}&nologo=true`;
 
             resultEl.innerHTML = `
                 <div class="loader"></div>
-                <div class="status">Generowanie grafiki...</div>
+                <div class="status">Wysyłanie zapytania do Hugging Face...</div>
             `;
 
-            const img = new Image();
-            img.src = imageUrl;
-            
-            img.onload = () => {
+            try {
+                const response = await fetch('https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ inputs: fullPrompt })
+                });
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(`Błąd serwera (${response.status}): ${errText}`);
+                }
+
+                const blob = await response.blob();
+                const imageUrl = URL.createObjectURL(blob);
+
                 resultEl.innerHTML = `
                     <img src="${imageUrl}" alt="Wygenerowany obraz">
                     <div class="status" style="color: #4ade80; margin-top: 10px;">Gotowe! Przytrzymaj obraz, aby zapisać.</div>
                 `;
-            };
-
-            img.onerror = () => {
-                // Automatyczna próba zapasowa z innym seedem w razie błędu serwera
-                const fallbackUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptBase)}?model=flux&seed=${seed + 1}&nologo=true`;
-                const imgRetry = new Image();
-                imgRetry.src = fallbackUrl;
-                
-                imgRetry.onload = () => {
-                    resultEl.innerHTML = `
-                        <img src="${fallbackUrl}" alt="Wygenerowany obraz">
-                        <div class="status" style="color: #4ade80; margin-top: 10px;">Gotowe (po ponowieniu)!</div>
-                    `;
-                };
-                
-                imgRetry.onerror = () => {
-                    resultEl.innerHTML = `<div class="status" style="color: #f87171;">Serwer przeciążony. Spróbuj kliknąć ponownie za chwilę.</div>`;
-                };
-            };
+            } catch (err) {
+                resultEl.innerHTML = `<div class="status" style="color: #f87171;">Błąd: ${err.message}</div>`;
+            }
         }
     </script>
 </body>
