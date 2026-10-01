@@ -59,9 +59,6 @@
             font-size: 15px;
             outline: none;
         }
-        textarea:focus, select:focus {
-            border-color: var(--accent);
-        }
         button {
             width: 100%;
             background: var(--accent);
@@ -72,11 +69,9 @@
             font-weight: bold;
             cursor: pointer;
             font-size: 16px;
-            transition: background 0.2s;
         }
         button:active {
             background: var(--accent-hover);
-            transform: scale(0.98);
         }
         #result {
             margin-top: 20px;
@@ -119,7 +114,7 @@
         <h2>Studio Generatora AI</h2>
         
         <label>Styl graficzny</label>
-        <select id="styleSelect" onchange="updatePromptStyle()">
+        <select id="styleSelect">
             <option value="cinematic">Cinematic / Realistyczny</option>
             <option value="cyberpunk">Cyberpunk Neon</option>
             <option value="anime">Anime / Manga</option>
@@ -141,11 +136,7 @@
             fantasy: ", magical fantasy world, glowing elements, ethereal mist, highly detailed digital painting"
         };
 
-        function updatePromptStyle() {
-            // Opcjonalnie można dostosować prompt bazowy
-        }
-
-        async function generateImage() {
+        function generateImage() {
             const promptBase = document.getElementById('prompt').value.trim();
             const style = document.getElementById('styleSelect').value;
             const resultEl = document.getElementById('result');
@@ -175,7 +166,21 @@
             };
 
             img.onerror = () => {
-                resultEl.innerHTML = `<div class="status" style="color: #f87171;">Błąd generowania obrazu. Spróbuj ponownie.</div>`;
+                // Automatyczna próba zapasowa z innym seedem w razie błędu serwera
+                const fallbackUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptBase)}?model=flux&seed=${seed + 1}&nologo=true`;
+                const imgRetry = new Image();
+                imgRetry.src = fallbackUrl;
+                
+                imgRetry.onload = () => {
+                    resultEl.innerHTML = `
+                        <img src="${fallbackUrl}" alt="Wygenerowany obraz">
+                        <div class="status" style="color: #4ade80; margin-top: 10px;">Gotowe (po ponowieniu)!</div>
+                    `;
+                };
+                
+                imgRetry.onerror = () => {
+                    resultEl.innerHTML = `<div class="status" style="color: #f87171;">Serwer przeciążony. Spróbuj kliknąć ponownie za chwilę.</div>`;
+                };
             };
         }
     </script>
