@@ -2,108 +2,181 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Studio Generatora AI</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #0b0f19; color: #fff; padding: 20px; margin: 0; }
-        .container { max-width: 600px; margin: auto; background: #151b2b; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
-        h2 { margin-top: 0; font-size: 1.2rem; color: #a5b4fc; }
-        label { font-size: 0.85rem; color: #94a3b8; display: block; margin-bottom: 5px; }
-        textarea, select { width: 100%; background: #1e293b; color: #fff; border: 1px solid #334155; border-radius: 8px; padding: 10px; margin-bottom: 15px; box-sizing: border-box; font-size: 14px; }
-        button { width: 100%; background: #6366f1; color: white; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; border-radius: 8px; }
-        button:active { background: #4f46e5; }
-        #result { margin-top: 20px; text-align: center; }
-        img { max-width: 100%; border-radius: 8px; margin-top: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
-        .status { font-size: 0.9rem; color: #94a3b8; margin-top: 12px; word-break: break-word; }
+        :root {
+            --bg: #0b0f19;
+            --card-bg: #151b2b;
+            --input-bg: #1e293b;
+            --border: #334155;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --text: #fff;
+            --text-secondary: #94a3b8;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 16px;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            box-sizing: border-box;
+        }
+        h2 {
+            margin-top: 0;
+            font-size: 1.3rem;
+            color: #a5b4fc;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        textarea, select {
+            width: 100%;
+            background: var(--input-bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 16px;
+            box-sizing: border-box;
+            font-size: 15px;
+            outline: none;
+        }
+        textarea:focus, select:focus {
+            border-color: var(--accent);
+        }
+        button {
+            width: 100%;
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.2s;
+        }
+        button:active {
+            background: var(--accent-hover);
+            transform: scale(0.98);
+        }
+        #result {
+            margin-top: 20px;
+            text-align: center;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        img {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        .status {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 12px;
+            text-align: center;
+        }
+        .loader {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border);
+            border-bottom-color: var(--accent);
+            border-radius: 50%;
+            display: inline-block;
+            animation: rotation 1s linear infinite;
+            margin-bottom: 10px;
+        }
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h2>Studio Generatora AI</h2>
         
-        <label>Silnik / Model</label>
-        <select id="engineSelect" onchange="toggleTokenInput()">
-            <option value="pollinations">FLUX (Bez tokena - Pewny na iOS)</option>
-            <option value="hf-router">FLUX.1-schnell (Hugging Face Router API)</option>
+        <label>Styl graficzny</label>
+        <select id="styleSelect" onchange="updatePromptStyle()">
+            <option value="cinematic">Cinematic / Realistyczny</option>
+            <option value="cyberpunk">Cyberpunk Neon</option>
+            <option value="anime">Anime / Manga</option>
+            <option value="fantasy">Magiczny Fantasy</option>
         </select>
-
-        <div id="tokenGroup" style="display: none;">
-            <label>Token Hugging Face</label>
-            <textarea id="tokens" rows="2" placeholder="hf_..."></textarea>
-        </div>
 
         <label>Opis sceny (Prompt)</label>
         <textarea id="prompt" rows="3">A glowing neon jellyfish floating smoothly through dark blue deep ocean, cinematic lighting</textarea>
 
-        <button onclick="generate()">Wygeneruj Obraz</button>
-        <div class="status" id="status">Status: Gotowy</div>
+        <button onclick="generateImage()">Wygeneruj Obraz</button>
         <div id="result"></div>
     </div>
 
     <script>
-        function toggleTokenInput() {
-            const engine = document.getElementById('engineSelect').value;
-            document.getElementById('tokenGroup').style.display = engine === 'hf-router' ? 'block' : 'none';
+        const styleModifiers = {
+            cinematic: ", cinematic lighting, highly detailed, 4k resolution, photorealistic",
+            cyberpunk: ", cyberpunk style, glowing neon lights, vibrant pink and cyan tones, futuristic",
+            anime: ", beautiful anime art style, vibrant colors, Studio Ghibli aesthetic, detailed illustration",
+            fantasy: ", magical fantasy world, glowing elements, ethereal mist, highly detailed digital painting"
+        };
+
+        function updatePromptStyle() {
+            // Opcjonalnie można dostosować prompt bazowy
         }
 
-        async function generate() {
-            const engine = document.getElementById('engineSelect').value;
-            const prompt = document.getElementById('prompt').value.trim();
-            const statusEl = document.getElementById('status');
+        async function generateImage() {
+            const promptBase = document.getElementById('prompt').value.trim();
+            const style = document.getElementById('styleSelect').value;
             const resultEl = document.getElementById('result');
 
-            if (!prompt) {
-                alert('Wpisz prompt!');
+            if (!promptBase) {
+                alert('Wpisz opis sceny!');
                 return;
             }
 
-            resultEl.innerHTML = '';
-            statusEl.innerText = 'Tworzenie obrazu...';
+            const fullPrompt = promptBase + (styleModifiers[style] || '');
+            const seed = Math.floor(Math.random() * 10000000);
+            const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?model=flux&seed=${seed}&nologo=true`;
 
-            if (engine === 'pollinations') {
-                const seed = Math.floor(Math.random() * 1000000);
-                const encodedPrompt = encodeURIComponent(prompt);
-                const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=flux&seed=${seed}&nologo=true`;
-                
-                const img = new Image();
-                img.src = imageUrl;
-                img.onload = () => {
-                    resultEl.innerHTML = `<img src="${imageUrl}" alt="Wynik">`;
-                    statusEl.innerText = 'Status: Sukces!';
-                };
-                img.onerror = () => {
-                    statusEl.innerText = 'Błąd wczytywania obrazu z serwera.';
-                };
-            } else {
-                const token = document.getElementById('tokens').value.trim();
-                if (!token) {
-                    alert('Wklej token Hugging Face!');
-                    return;
-                }
+            resultEl.innerHTML = `
+                <div class="loader"></div>
+                <div class="status">Generowanie grafiki...</div>
+            `;
 
-                try {
-                    const response = await fetch('https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell', {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ inputs: prompt })
-                    });
+            const img = new Image();
+            img.src = imageUrl;
+            
+            img.onload = () => {
+                resultEl.innerHTML = `
+                    <img src="${imageUrl}" alt="Wygenerowany obraz">
+                    <div class="status" style="color: #4ade80; margin-top: 10px;">Gotowe! Przytrzymaj obraz, aby zapisać.</div>
+                `;
+            };
 
-                    if (!response.ok) {
-                        const errText = await response.text();
-                        throw new Error(`HTTP ${response.status}: ${errText}`);
-                    }
-
-                    const blob = await response.blob();
-                    const imgUrl = URL.createObjectURL(blob);
-                    resultEl.innerHTML = `<img src="${imgUrl}" alt="Wynik">`;
-                    statusEl.innerText = 'Status: Sukces!';
-                } catch (err) {
-                    statusEl.innerText = `Błąd: ${err.message}`;
-                }
-            }
+            img.onerror = () => {
+                resultEl.innerHTML = `<div class="status" style="color: #f87171;">Błąd generowania obrazu. Spróbuj ponownie.</div>`;
+            };
         }
     </script>
 </body>
